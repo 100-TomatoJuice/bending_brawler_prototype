@@ -11,13 +11,24 @@ use leafwing_input_manager::action_state::ActionState;
 
 use crate::player::grab::Held;
 
-use super::{grab::{Owner, ParentObject, Rock}, Action};
+use super::{
+    grab::{Owner, ParentObject, Rock},
+    Action,
+};
 
 pub struct ParryPlugin;
 
 impl Plugin for ParryPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (regen_parry, initate_parry, parry.before(regen_parry), draw_parry));
+        app.add_systems(
+            Update,
+            (
+                regen_parry,
+                initate_parry,
+                parry.before(regen_parry),
+                draw_parry,
+            ),
+        );
     }
 }
 
@@ -36,32 +47,44 @@ impl Default for Parry {
     fn default() -> Self {
         Parry {
             max_radius: 70.0,
-            min_radius: 10.0,
-            current_radius: 140.0,
+            min_radius: 17.5,
+            current_radius: 240.0,
             duration: 0.10,
             time_left: Timer::from_seconds(0.0, TimerMode::Once),
-            regen_rate: 10.0,
-            falloff: 70.0,
+            regen_rate: 0.01,
+            falloff: 30.0,
         }
     }
 }
 
 fn regen_parry(mut query: Query<&mut Parry>, time: Res<Time>) {
     for mut parry in query.iter_mut() {
-        parry.current_radius = (parry.current_radius + parry.regen_rate * time.delta_seconds()).min(parry.max_radius);
+        //println!("P: {}", parry.current_radius);
+        let x = parry.current_radius / parry.max_radius;
+        let p = if x >= 1.0 {
+            1.0
+        } else {
+            //speed * x.powf(-2.0)
+            //(1.0 - (x - 1.0).powf(2.0)).sqrt() * speed // ease out circ
+                                                       //1.0 - (2.0_f32).powf(-speed * x) // ease out expo
+            parry.regen_rate * x.powf(2.0)
+        };
+
+        println!("P; {}, X: {}, R: {}", p, x, parry.current_radius);
+        parry.current_radius = parry.max_radius * (x + p).min(1.0);
+        // parry.current_radius =
+        //     (parry.current_radius + parry.regen_rate * time.delta_seconds()).min(parry.max_radius);
     }
 }
 
 fn initate_parry(mut query: Query<(&ActionState<Action>, &mut Parry)>) {
     for (action, mut parry) in query.iter_mut() {
-        if !action.just_pressed(&Action::Parry) || parry.time_left.remaining_secs() > 0.0{
+        if !action.just_pressed(&Action::Parry) || parry.time_left.remaining_secs() > 0.0 {
             continue;
         }
 
         let duration = parry.duration;
-        parry
-            .time_left
-            = Timer::from_seconds(duration, TimerMode::Once);
+        parry.time_left = Timer::from_seconds(duration, TimerMode::Once);
     }
 }
 
@@ -87,7 +110,9 @@ fn parry(
                 let Ok(parent) = collider_query.get(entity) else {
                     return true;
                 };
-                let Ok((rock_transform, mut owner, mut velocity)) = parent_query.get_mut(parent.get()) else {
+                let Ok((rock_transform, mut owner, mut velocity)) =
+                    parent_query.get_mut(parent.get())
+                else {
                     return true;
                 };
                 let unit_direction = (transform.translation - rock_transform.translation)
