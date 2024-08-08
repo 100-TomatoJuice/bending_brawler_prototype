@@ -35,9 +35,12 @@ impl Plugin for DamagePlugin {
 }
 
 fn damage_player(
-    mut player_query: Query<&mut PlayerHealth>,
-    collider_query: Query<&Parent, With<Rock>>,
-    rock_query: Query<(Entity, &Owner, &Velocity, &ReadMassProperties), With<ParentObject>>,
+    mut player_query: Query<(&Transform, &mut ExternalImpulse, &mut PlayerHealth)>,
+    collider_query: Query<(&GlobalTransform, &Parent), With<Rock>>,
+    rock_query: Query<
+        (Entity, &Transform, &Owner, &Velocity, &ReadMassProperties),
+        With<ParentObject>,
+    >,
     mut events: EventReader<CollisionEvent>,
 ) {
     for event in events.read() {
@@ -45,9 +48,11 @@ fn damage_player(
             continue;
         };
 
-        if let Ok(mut health) = player_query.get_mut(*e2) {
-            if let Ok(parent) = collider_query.get(*e1) {
-                let Ok((entity, owner, velocity, mass)) = rock_query.get(parent.get()) else {
+        if let Ok((transform, mut external, mut health)) = player_query.get_mut(*e2) {
+            if let Ok((colldier_transform, parent)) = collider_query.get(*e1) {
+                let Ok((entity, colldier_transforma, owner, velocity, mass)) =
+                    rock_query.get(parent.get())
+                else {
                     continue;
                 };
                 if velocity.linvel.length() < VELOCITYTHRESHOLD || owner.0 == *e2 {
@@ -55,6 +60,13 @@ fn damage_player(
                 }
 
                 health.0 -= (velocity.linvel.length() * mass.mass).sqrt();
+
+                let direction = (colldier_transform.translation() - transform.translation)
+                    .truncate()
+                    .normalize_or_zero();
+                external.impulse =
+                    -direction * (velocity.linvel.length() * mass.mass).sqrt() * 5000.0;
+
                 println!("V: {}", velocity.linvel.length());
                 println!(
                     "Damage {} by {}",
@@ -64,9 +76,11 @@ fn damage_player(
                 continue;
             }
         }
-        if let Ok(mut health) = player_query.get_mut(*e1) {
-            if let Ok(parent) = collider_query.get(*e2) {
-                let Ok((entity, owner, velocity, mass)) = rock_query.get(parent.get()) else {
+        if let Ok((transform, mut external, mut health)) = player_query.get_mut(*e1) {
+            if let Ok((colldier_transform, parent)) = collider_query.get(*e2) {
+                let Ok((entity, colldier_transforma, owner, velocity, mass)) =
+                    rock_query.get(parent.get())
+                else {
                     continue;
                 };
                 if velocity.linvel.length() < VELOCITYTHRESHOLD || owner.0 == *e1 {
@@ -74,6 +88,13 @@ fn damage_player(
                 }
 
                 health.0 -= (velocity.linvel.length() * mass.mass).sqrt();
+
+                let direction = (colldier_transform.translation() - transform.translation)
+                    .truncate()
+                    .normalize_or_zero();
+                external.impulse =
+                    -direction * (velocity.linvel.length() * mass.mass).sqrt() * 5000.0;
+
                 println!(
                     "Damage {} by {}",
                     *e1,
@@ -94,7 +115,10 @@ fn despawn_player(mut commands: Commands, query: Query<(Entity, &PlayerHealth)>)
     }
 }
 
-fn despawn_fallen_rocks(mut commands: Commands, query: Query<(Entity, &GlobalTransform), With<Rock>>) {
+fn despawn_fallen_rocks(
+    mut commands: Commands,
+    query: Query<(Entity, &GlobalTransform), With<Rock>>,
+) {
     for (entity, transform) in query.iter() {
         if transform.translation().y <= DESPAWNFALLENY {
             commands.entity(entity).despawn();

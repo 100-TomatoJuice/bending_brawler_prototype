@@ -56,6 +56,7 @@ fn spawn_player(
                 InputManagerBundle::<Action>::with_map(map),
                 Collider::ball(15.0),
                 RigidBody::Dynamic,
+                ExternalImpulse::default(),
                 ColliderMassProperties::Mass(20000.0),
                 TnuaControllerBundle::default(),
                 TnuaRapier2dSensorShape(Collider::capsule_x(15.0, 0.0)),
