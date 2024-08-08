@@ -151,6 +151,22 @@ pub struct HeldObject(pub Option<Entity>);
 #[derive(Default, Component)]
 pub struct PlayerHealth(pub f32);
 
+#[derive(Component)]
+pub struct ExtraJumps {
+    pub max: i32,
+    pub current: i32,
+}
+
+impl Default for ExtraJumps {
+    fn default() -> Self {
+        let jumps = 1;
+        ExtraJumps {
+            max: jumps,
+            current: jumps,
+        }
+    }
+}
+
 #[derive(Default, Component)]
 pub struct PlayerIndex(pub usize);
 
@@ -160,6 +176,7 @@ pub struct PlayerBundle {
     pub range: Range,
     pub radius: Radius,
     pub parry: Parry,
+    pub jumps: ExtraJumps,
     pub held: HeldObject,
     pub health: PlayerHealth,
     pub index: PlayerIndex,
