@@ -5,7 +5,7 @@ use crate::sandbox::{particle_types::get_particle, sandbox::Sandbox};
 
 use super::{
     grab::{Held, ParentObject},
-    Action, AimDirection, HeldObject, Radius, Range,
+    Action, HeldObject,
 };
 
 pub struct SetPlugin;

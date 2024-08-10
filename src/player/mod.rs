@@ -19,16 +19,15 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(InputManagerPlugin::<Action>::default())
             .insert_resource(UsedGamepads::default())
-            .add_plugins((PlayerMovementPlugin, PlayerAimPlugin, PlayerConnectionPlugin, GrabPlugin, SetPlugin, ParryPlugin))
-            .add_systems(Update, change_color_on_health)
-            //.add_system(display_position)
-        ;
-    }
-}
-
-fn display_position(q: Query<&Transform, With<Player>>) {
-    for a in q.iter() {
-        println!("{}", a.translation);
+            .add_plugins((
+                PlayerMovementPlugin,
+                PlayerAimPlugin,
+                PlayerConnectionPlugin,
+                GrabPlugin,
+                SetPlugin,
+                ParryPlugin,
+            ))
+            .add_systems(Update, change_color_on_health);
     }
 }
 

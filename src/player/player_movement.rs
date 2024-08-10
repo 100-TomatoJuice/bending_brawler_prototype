@@ -32,11 +32,7 @@ fn apply_controls(mut query: Query<(&ActionState<Action>, &mut TnuaController, &
         });
 
         if action.pressed(&Action::Jump) {
-            let allow = if jumps.current > 0 {
-                true
-            } else {
-                false
-            };
+            let allow = if jumps.current > 0 { true } else { false };
 
             controller.action(TnuaBuiltinJump {
                 height: 250.0,

@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier2d::{
-    dynamics::{
-        Ccd, Damping, ExternalForce, ExternalImpulse, GravityScale, ReadMassProperties, RigidBody,
-        Velocity,
-    },
+    dynamics::{Ccd, Damping, GravityScale, ReadMassProperties, RigidBody, Velocity},
     geometry::{ActiveEvents, Collider, CollisionGroups, Friction, Group},
 };
 use leafwing_input_manager::prelude::ActionState;
@@ -72,8 +69,8 @@ fn increase_grab_radius(mut query: Query<(&ActionState<Action>, &mut Radius)>, t
     }
 }
 
-fn release_grab(mut query: Query<(&mut ActionState<Action>, &mut Radius)>) {
-    for (mut action, mut radius) in query.iter_mut() {
+fn release_grab(mut query: Query<(&ActionState<Action>, &mut Radius)>) {
+    for (action, mut radius) in query.iter_mut() {
         if action.just_released(&Action::Grab) {
             radius.current = radius.min;
         }
@@ -82,14 +79,14 @@ fn release_grab(mut query: Query<(&mut ActionState<Action>, &mut Radius)>) {
 
 fn release_held(
     mut commands: Commands,
-    mut query: Query<(&ActionState<Action>, &AimDirection, &mut HeldObject)>,
+    mut query: Query<(&ActionState<Action>, &mut HeldObject)>,
     mut parent_query: Query<
         (Entity, &mut Velocity, &mut GravityScale),
         (With<ParentObject>, With<Held>),
     >,
     mut state: ResMut<NextState<GrabState>>,
 ) {
-    for (action, aim, mut held) in query.iter_mut() {
+    for (action, mut held) in query.iter_mut() {
         let Some(entity) = held.0 else {
             continue;
         };
@@ -219,47 +216,32 @@ fn grab_dirt(
 
 pub fn move_object(
     player_query: Query<
-        (
-            &Transform,
-            &Velocity,
-            &AimDirection,
-            &Range,
-            &Radius,
-            &HeldObject,
-        ),
+        (&Transform, &AimDirection, &Range, &Radius, &HeldObject),
         Without<ParentObject>,
     >,
     mut parent_query: Query<
-        (
-            &Transform,
-            &mut Velocity,
-            &mut ActualVelocity,
-            &ReadMassProperties,
-        ),
+        (&Transform, &mut Velocity, &ReadMassProperties),
         (With<ParentObject>, With<Held>),
     >,
-    time: Res<Time>,
 ) {
-    for (transform, velocity, aim, range, radius, held) in player_query.iter() {
+    for (transform, aim, range, radius, held) in player_query.iter() {
         let Some(parent_entity) = held.0 else {
             continue;
         };
 
-        let Ok((parent_transform, mut velocity, mut exteral, properties)) =
-            parent_query.get_mut(parent_entity)
+        let Ok((parent_transform, mut velocity, properties)) = parent_query.get_mut(parent_entity)
         else {
             continue;
         };
         let desired_pos = transform.translation.truncate() + (aim.0 * (range.0 + radius.current));
-        //println!("{}", properties.get().mass);
-        let mut force = (desired_pos - parent_transform.translation.truncate()) * 400.0;
+        let force = (desired_pos - parent_transform.translation.truncate()) * 400.0;
         let mass = if properties.mass.is_nan() || properties.mass <= f32::EPSILON {
             64.0
         } else {
             properties.mass.sqrt()
         };
+
         velocity.linvel = force / mass;
-        //println!("V: {}, E: {}", velocity.linvel.length(), exteral.impulse.length());
     }
 }
 
@@ -352,7 +334,6 @@ fn place_back_particle(
         (Entity, &Velocity),
         (With<Rock>, With<PutBackIntoSandbox>, Without<Parent>),
     >,
-    held_query: Query<(), With<Held>>,
     transform_query: Query<&GlobalTransform>,
 ) {
     let mut sandbox = sandbox_query.single_mut();

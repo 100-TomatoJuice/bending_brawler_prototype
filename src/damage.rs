@@ -3,8 +3,8 @@ use bevy_rapier2d::prelude::*;
 
 use crate::{
     player::{
-        components::{HeldObject, PlayerHealth},
-        grab::{move_object, ActualVelocity, Held, Owner, ParentObject, PutBackIntoSandbox, Rock},
+        components::PlayerHealth,
+        grab::{ActualVelocity, Owner, ParentObject, PutBackIntoSandbox, Rock},
     },
     sandbox::{collider::Ground, sandbox::Sandbox},
 };
@@ -37,10 +37,7 @@ impl Plugin for DamagePlugin {
 fn damage_player(
     mut player_query: Query<(&Transform, &mut ExternalImpulse, &mut PlayerHealth)>,
     collider_query: Query<(&GlobalTransform, &Parent), With<Rock>>,
-    rock_query: Query<
-        (Entity, &Transform, &Owner, &Velocity, &ReadMassProperties),
-        With<ParentObject>,
-    >,
+    rock_query: Query<(&Owner, &Velocity, &ReadMassProperties), With<ParentObject>>,
     mut events: EventReader<CollisionEvent>,
 ) {
     for event in events.read() {
@@ -50,9 +47,7 @@ fn damage_player(
 
         if let Ok((transform, mut external, mut health)) = player_query.get_mut(*e2) {
             if let Ok((colldier_transform, parent)) = collider_query.get(*e1) {
-                let Ok((entity, colldier_transforma, owner, velocity, mass)) =
-                    rock_query.get(parent.get())
-                else {
+                let Ok((owner, velocity, mass)) = rock_query.get(parent.get()) else {
                     continue;
                 };
                 if velocity.linvel.length() < VELOCITYTHRESHOLD || owner.0 == *e2 {
@@ -78,9 +73,7 @@ fn damage_player(
         }
         if let Ok((transform, mut external, mut health)) = player_query.get_mut(*e1) {
             if let Ok((colldier_transform, parent)) = collider_query.get(*e2) {
-                let Ok((entity, colldier_transforma, owner, velocity, mass)) =
-                    rock_query.get(parent.get())
-                else {
+                let Ok((owner, velocity, mass)) = rock_query.get(parent.get()) else {
                     continue;
                 };
                 if velocity.linvel.length() < VELOCITYTHRESHOLD || owner.0 == *e1 {
@@ -295,8 +288,8 @@ fn damage_rock(
 fn break_from_ground(
     mut commands: Commands,
     mut sandbox_query: Query<&mut Sandbox>,
-    collider_query: Query<(Entity, &GlobalTransform, &Parent, &ActualVelocity), With<Rock>>,
-    parent_query: Query<(&ActualVelocity, &Velocity), (With<ParentObject>)>,
+    collider_query: Query<(Entity, &GlobalTransform, &Parent), With<Rock>>,
+    parent_query: Query<(&ActualVelocity, &Velocity), With<ParentObject>>,
     ground_query: Query<(), With<Ground>>,
     mut events: EventReader<CollisionEvent>,
 ) {
@@ -307,7 +300,7 @@ fn break_from_ground(
             continue;
         };
 
-        if let Ok((entity, transform, parent, e)) = collider_query.get(*e1) {
+        if let Ok((entity, transform, parent)) = collider_query.get(*e1) {
             if !ground_query.contains(*e2) {
                 continue;
             }
@@ -377,7 +370,7 @@ fn break_from_ground(
 
             commands.entity(entity).despawn();
         }
-        if let Ok((entity, transform, parent, external)) = collider_query.get(*e2) {
+        if let Ok((entity, transform, parent)) = collider_query.get(*e2) {
             if !ground_query.contains(*e1) {
                 continue;
             }

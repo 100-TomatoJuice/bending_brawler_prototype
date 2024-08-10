@@ -1,11 +1,6 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 use bevy_rapier2d::{
-    dynamics::Velocity,
-    geometry::{Collider, ShapeCastOptions},
-    pipeline::QueryFilter,
-    plugin::RapierContext,
+    dynamics::Velocity, geometry::Collider, pipeline::QueryFilter, plugin::RapierContext,
 };
 use leafwing_input_manager::action_state::ActionState;
 
@@ -59,21 +54,14 @@ impl Default for Parry {
 
 fn regen_parry(mut query: Query<&mut Parry>, time: Res<Time>) {
     for mut parry in query.iter_mut() {
-        //println!("P: {}", parry.current_radius);
         let x = parry.current_radius / parry.max_radius;
         let p = if x >= 1.0 {
             1.0
         } else {
-            //speed * x.powf(-2.0)
-            //(1.0 - (x - 1.0).powf(2.0)).sqrt() * speed // ease out circ
-                                                       //1.0 - (2.0_f32).powf(-speed * x) // ease out expo
             parry.regen_rate * x.powf(2.0)
         };
 
-        println!("P; {}, X: {}, R: {}", p, x, parry.current_radius);
         parry.current_radius = parry.max_radius * (x + p).min(1.0);
-        // parry.current_radius =
-        //     (parry.current_radius + parry.regen_rate * time.delta_seconds()).min(parry.max_radius);
     }
 }
 
@@ -127,7 +115,6 @@ fn parry(
                     entity.remove::<Held>();
                 }
                 owner.0 = player;
-                println!("Parryed ");
                 true
             },
         );
