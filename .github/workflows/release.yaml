@@ -1,200 +1,205 @@
 name: Release
 
 on:
-  # Trigger this workflow when a tag is pushed in the format `v1.2.3`.
   push:
     tags:
-      # Pattern syntax: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
-      - "v[0-9]+.[0-9]+.[0-9]+*"
-  # Trigger this workflow manually via workflow dispatch.
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version number in the format `v1.2.3`'
-        required: true
-        type: string
+      - '*'
 
-# Configure constants for this workflow.
 env:
-  # The base filename of the binary produced by `cargo build`.
-  BINARY: bending_brawler
-  # The name to use for the packaged application produced by this workflow.
-  PACKAGE_NAME: bending_brawler
-  # The organization or author that owns the rights to the game.
-  OWNER: 100-TomatoJuice
-  # The path to the assets directory.
-  ASSETS_DIR: assets
-  # Whether packages produced by this workflow should be uploaded to the Github release.
-  UPLOAD_PACKAGES_TO_GITHUB_RELEASE: true
+  # update with the name of the main binary
+  binary: bending_brawler
+  add_binaries_to_github_release: true
+
   # Before enabling LFS, please take a look at GitHub's documentation for costs and quota limits:
   # https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-storage-and-bandwidth-usage
-  USE_GIT_LFS: false
+  use_git_lfs: false
+
 
 jobs:
-  # Determine the version number for this workflow.
-  get-version:
+
+  # Build for Linux
+  release-linux:
     runs-on: ubuntu-latest
-    steps:
-      - name: Get version number from tag
-        id: tag
-        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "${GITHUB_OUTPUT}"
-    outputs:
-      # Use the input from workflow dispatch, or fall back to the git tag.
-      version: ${{ inputs.version || steps.tag.outputs.tag }}
-
-  # Build and package a release for each platform.
-  build:
-    needs:
-      - get-version
-    env:
-      VERSION: ${{ needs.get-version.outputs.version }}
-    strategy:
-      matrix:
-        include:
-          - platform: linux
-            targets: x86_64-unknown-linux-gnu
-            profile: release-native
-            features: bevy/wayland
-            package_ext: .zip
-            runner: ubuntu-latest
-
-          - platform: windows
-            targets: x86_64-pc-windows-msvc
-            profile: release-native
-            binary_ext: .exe
-            package_ext: .zip
-            runner: windows-latest
-
-          - platform: macos
-            targets: x86_64-apple-darwin aarch64-apple-darwin
-            profile: release-native
-            out_dir_suffix: .app/Contents/MacOS
-            package_ext: .dmg
-            runner: macos-latest
-    runs-on: ${{ matrix.runner }}
-    permissions:
-      # Required to create a GitHub release (https://docs.github.com/en/rest/releases/releases#create-a-release).
-      contents: write
-    defaults:
-      run:
-        shell: bash
 
     steps:
-      - name: Set up environment
-        run: |
-          echo 'PACKAGE=${{ env.PACKAGE_NAME }}-${{ matrix.platform }}' >> "${GITHUB_ENV}"
-          echo 'OUT_DIR=tmp/package/${{ env.PACKAGE_NAME }}${{ matrix.out_dir_suffix }}' >> "${GITHUB_ENV}"
-          if [ '${{ matrix.platform }}' == 'macos' ]; then
-            echo 'MACOSX_DEPLOYMENT_TARGET=11.0' >> "${GITHUB_ENV}" # MacOS 11.0 Big Sur is the first version to support universal binaries.
-            echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> "${GITHUB_ENV}"
-          fi
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: olegtarasov/get-tag@v2.1.2
+        id: get_version
+      - uses: actions/checkout@v4
         with:
-          lfs: ${{ env.USE_GIT_LFS }}
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+          lfs: ${{ env.use_git_lfs }}
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.targets }}
-
-      - name: Populate target directory from cache
-        uses: Leafwing-Studios/cargo-cache@v2
-
-      - name: Install dependencies (Linux)
-        if: ${{ matrix.platform == 'linux' }}
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
-
-      - name: Prepare output directories
-        run: rm -rf tmp; mkdir -p tmp/binary '${{ env.OUT_DIR }}'
-
-      - name: Build binaries (non-Web)
-        if: ${{ matrix.platform != 'web' }}
+          targets: x86_64-unknown-linux-gnu
+      - name: install dependencies
         run: |
-          for target in ${{ matrix.targets }}; do
-            cargo build --profile='${{ matrix.profile }}' --target="${target}" --no-default-features --features='${{ matrix.features }}'
-            mv target/"${target}"/'${{ matrix.profile }}/${{ env.BINARY }}${{ matrix.binary_ext }}' tmp/binary/"${target}"'${{ matrix.binary_ext }}'
-          done
+          sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
 
-      - name: Add binaries to package (non-Web)
-        if: ${{ matrix.platform != 'web' }}
+      - name: Build
         run: |
-          if [ '${{ matrix.platform }}' == 'macos' ]; then
-            lipo tmp/binary/*'${{ matrix.binary_ext }}' -create -output '${{ env.OUT_DIR }}/${{ env.PACKAGE_NAME }}${{ matrix.binary_ext }}'
-          else
-            mv tmp/binary/*'${{ matrix.binary_ext }}' '${{ env.OUT_DIR }}/${{ env.PACKAGE_NAME }}${{ matrix.binary_ext }}'
-          fi
+          cargo build --release --target x86_64-unknown-linux-gnu
 
-      - name: Add assets to package (non-Web)
-        if: ${{ matrix.platform != 'web' }}
-        run: cp -r '${{ env.ASSETS_DIR }}' '${{ env.OUT_DIR }}' || true # Ignore error if assets folder does not exist
-
-      - name: Add app metadata to package (MacOS)
-        if: ${{ matrix.platform == 'macos' }}
+      - name: Prepare package
         run: |
-          cat > '${{ env.OUT_DIR }}/../Info.plist' << EOF
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0">
-                <dict>
-                    <key>CFBundleDevelopmentRegion</key>
-                    <string>en</string>
-                    <key>CFBundleDisplayName</key>
-                    <string>${{ env.PACKAGE_NAME }}</string>
-                    <key>CFBundleExecutable</key>
-                    <string>${{ env.PACKAGE_NAME }}</string>
-                    <key>CFBundleIdentifier</key>
-                    <string>${{ env.OWNER }}.${{ env.PACKAGE_NAME }}</string>
-                    <key>CFBundleName</key>
-                    <string>${{ env.PACKAGE_NAME }}</string>
-                    <key>CFBundleShortVersionString</key>
-                    <string>${{ env.VERSION }}</string>
-                    <key>CFBundleVersion</key>
-                    <string>${{ env.VERSION }}</string>
-                    <key>CFBundleInfoDictionaryVersion</key>
-                    <string>6.0</string>
-                    <key>CFBundlePackageType</key>
-                    <string>APPL</string>
-                    <key>CFBundleSupportedPlatforms</key>
-                    <array>
-                        <string>MacOSX</string>
-                    </array>
-                </dict>
-            </plist>
-          EOF
+          mkdir linux
+          cp target/x86_64-unknown-linux-gnu/release/${{ env.binary }} linux/
+          cp -r assets linux/ || true # Try to copy, but ignore if it can't copy if source directory does not exist
 
-      - name: Finish package (non-Windows)
-        if: ${{ matrix.platform != 'windows' }}
-        working-directory: tmp/package
+      - name: Package as a zip
+        working-directory: ./linux
         run: |
-          if [ '${{ matrix.platform }}' == 'macos' ]; then
-            ln -s /Applications .
-            hdiutil create -fs HFS+ -volname '${{ env.PACKAGE_NAME }}' -srcfolder . '${{ env.PACKAGE }}${{ matrix.package_ext }}'
-          else
-            zip --recurse-paths '${{ env.PACKAGE }}${{ matrix.package_ext }}' '${{ env.PACKAGE_NAME }}'
-          fi
+          zip --recurse-paths ../${{ env.binary }}.zip .
 
-      - name: Finish package (Windows)
-        if: ${{ matrix.platform == 'windows' }}
-        working-directory: tmp/package
-        shell: pwsh
-        run: Compress-Archive -Path '${{ env.PACKAGE_NAME }}' -DestinationPath '${{ env.PACKAGE }}${{ matrix.package_ext }}'
-
-      - name: Upload package to artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload binaries to artifacts
+        uses: actions/upload-artifact@v3
         with:
-          path: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
-          name: package-${{ matrix.platform }}
+          path: ${{ env.binary }}.zip
+          name: linux
           retention-days: 1
 
-      - name: Upload package to Github release
-        if: ${{ env.UPLOAD_PACKAGES_TO_GITHUB_RELEASE == 'true' }}
+      - name: Upload binaries to release
+        if: ${{ env.add_binaries_to_github_release == 'true' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
-          asset_name: ${{ env.PACKAGE }}${{ matrix.package_ext }}
-          release_name: ${{ env.VERSION }}
-          tag: ${{ env.VERSION }}
+          file: ${{ env.binary }}.zip
+          asset_name: ${{ env.binary }}-linux-${{ steps.get_version.outputs.tag }}.zip
+          tag: ${{ github.ref }}
+          overwrite: true
+
+  # Build for Windows
+  release-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: olegtarasov/get-tag@v2.1.2
+        id: get_version
+      - uses: actions/checkout@v4
+        with:
+          lfs: ${{ env.use_git_lfs }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Build
+        run: |
+          cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Prepare package
+        run: |
+          mkdir windows
+          cp target/x86_64-pc-windows-msvc/release/${{ env.binary }}.exe windows/
+          mkdir assets -ea 0 # create the assets directory if it does not exist, it will get ignored in the zip if empty
+          cp -r assets windows/
+
+      - name: Package as a zip
+        run: |
+          Compress-Archive -Path windows/* -DestinationPath ${{ env.binary }}.zip
+
+      - name: Upload binaries to artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ env.binary }}.zip
+          name: windows
+          retention-days: 1
+
+      - name: Upload binaries to release
+        if: ${{ env.add_binaries_to_github_release == 'true' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.binary }}.zip
+          asset_name: ${{ env.binary }}-windows-${{ steps.get_version.outputs.tag }}.zip
+          tag: ${{ github.ref }}
+          overwrite: true
+
+  # Build for MacOS x86_64
+  release-macOS-intel:
+    runs-on: macOS-latest
+
+    steps:
+      - uses: olegtarasov/get-tag@v2.1.2
+        id: get_version
+      - uses: actions/checkout@v4
+        with:
+          lfs: ${{ env.use_git_lfs }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+      - name: Environment Setup
+        run: |
+          export CFLAGS="-fno-stack-check"
+          export MACOSX_DEPLOYMENT_TARGET="10.9"
+
+      - name: Build
+        run: |
+          cargo build --release --target x86_64-apple-darwin
+
+      - name: Prepare Package
+        run: |
+          mkdir -p ${{ env.binary }}.app/Contents/MacOS
+          cp target/x86_64-apple-darwin/release/${{ env.binary }} ${{ env.binary }}.app/Contents/MacOS/
+          cp -r assets ${{ env.binary }}.app/Contents/MacOS/ || true # Try to copy, but ignore if it can't copy if source directory does not exist
+          hdiutil create -fs HFS+ -volname "${{ env.binary }}" -srcfolder ${{ env.binary }}.app ${{ env.binary }}-macOS-intel.dmg
+
+      - name: Upload binaries to artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ env.binary }}-macOS-intel.dmg
+          name: macOS-intel
+          retention-days: 1
+
+      - name: Upload binaries to release
+        if: ${{ env.add_binaries_to_github_release == 'true' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file:  ${{ env.binary }}-macOS-intel.dmg
+          asset_name: ${{ env.binary }}-macOS-intel-${{ steps.get_version.outputs.tag }}.dmg
+          tag: ${{ github.ref }}
+          overwrite: true
+
+  # Build for MacOS Apple Silicon
+  release-macOS-apple-silicon:
+    runs-on: macOS-latest
+
+    steps:
+      - uses: olegtarasov/get-tag@v2.1.2
+        id: get_version
+      - uses: actions/checkout@v4
+        with:
+          lfs: ${{ env.use_git_lfs }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - name: Environment 
+        # macOS 11 was the first version to support ARM
+        run: |
+          export MACOSX_DEPLOYMENT_TARGET="11"
+
+      - name: Build
+        run: |
+          cargo build --release --target aarch64-apple-darwin
+
+      - name: Prepare Package
+        run: |
+          mkdir -p ${{ env.binary }}.app/Contents/MacOS
+          cp target/aarch64-apple-darwin/release/${{ env.binary }} ${{ env.binary }}.app/Contents/MacOS/
+          cp -r assets ${{ env.binary }}.app/Contents/MacOS/ || true # Try to copy, but ignore if it can't copy if source directory does not exist
+          hdiutil create -fs HFS+ -volname "${{ env.binary }}-macOS-apple-silicon" -srcfolder ${{ env.binary }}.app ${{ env.binary }}-macOS-apple-silicon.dmg
+
+      - name: Upload binaries to artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ env.binary }}-macOS-apple-silicon.dmg
+          name: macOS-apple-silicon
+          retention-days: 1
+
+      - name: Upload binaries to release
+        if: ${{ env.add_binaries_to_github_release == 'true' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.binary }}-macOS-apple-silicon.dmg
+          asset_name: ${{ env.binary }}-macOS-apple-silicon-${{ steps.get_version.outputs.tag }}.dmg
+          tag: ${{ github.ref }}
           overwrite: true
