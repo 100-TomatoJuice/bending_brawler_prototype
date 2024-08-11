@@ -17,9 +17,9 @@ on:
 # Configure constants for this workflow.
 env:
   # The base filename of the binary produced by `cargo build`.
-  BINARY: bending_brawler
+  BINARY: bending_brawler_prototype
   # The name to use for the packaged application produced by this workflow.
-  PACKAGE_NAME: bending_brawler
+  PACKAGE_NAME: bending_brawler_prototype
   # The organization or author that owns the rights to the game.
   OWNER: 100-TomatoJuice
   # The path to the assets directory.
