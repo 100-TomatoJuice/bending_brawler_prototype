@@ -12,7 +12,6 @@ pub enum ParticleTypes {
     Wood,
     Glass,
     Spark,
-    Ember,
     Smoke,
     Lava,
     Oil,
@@ -21,9 +20,7 @@ pub enum ParticleTypes {
     Ash,
     Dirt,
     Grass,
-    Alcohol,
     Igneous,
-    Indestructible,
 }
 
 pub fn get_particle(particle_type: ParticleTypes) -> Particle {
@@ -142,21 +139,6 @@ pub fn get_particle(particle_type: ParticleTypes) -> Particle {
                 ..default()
             }
         }
-        ParticleTypes::Ember => {
-            let tick_health = thread_rng().gen_range(30..45);
-            Particle {
-                health: ParticleHealth::new(tick_health, true),
-                color: (190, 121, 121, 255),
-                density: Density(u32::MAX),
-                temperature_changer: Some(TemperatureChanger(-5)),
-                tick_life: Some(TickLife {
-                    replace_on_death: None,
-                }),
-                collision_type: CollisionType::Fire,
-                affected_by_gravity: true,
-                ..default()
-            }
-        }
         ParticleTypes::Smoke => {
             let tick_health = thread_rng().gen_range(40..55);
             Particle {
@@ -262,43 +244,12 @@ pub fn get_particle(particle_type: ParticleTypes) -> Particle {
             affected_by_gravity: true,
             ..default()
         },
-        ParticleTypes::Alcohol => Particle {
-            health: ParticleHealth::new(50, false),
-            color: (242, 215, 94, 255),
-            movement_type: MovementType::Liquid,
-            density: Density(2),
-            temperature: Some(Temperature::new(
-                5,
-                true,
-                true,
-                false,
-                Some(ParticleTypes::Spark),
-                0,
-            )),
-            burnable: Some(Burnable {
-                burn_temperature: -2,
-                burn_ticks: 15,
-                burn_color: (204, 146, 94, 255),
-                cooled_color: (125, 110, 110, 255),
-                burning: false,
-            }),
-            affected_by_gravity: true,
-            ..default()
-        },
         ParticleTypes::Igneous => Particle {
             color: (110, 34, 13, 255),
             movement_type: MovementType::Solid,
             density: Density(u32::MAX),
             collision_type: CollisionType::Solid,
             affected_by_gravity: true,
-            ..default()
-        },
-        ParticleTypes::Indestructible => Particle {
-            health: ParticleHealth::new(i32::MAX, false),
-            color: (210, 0, 205, 255),
-            movement_type: MovementType::Solid,
-            density: Density(u32::MAX),
-            collision_type: CollisionType::Solid,
             ..default()
         },
     }

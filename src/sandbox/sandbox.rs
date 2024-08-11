@@ -5,7 +5,7 @@ use super::{chunk::SandboxChunk, particle::Particle};
 #[derive(Component)]
 pub struct Sandbox {
     x_chunks: usize,
-    y_chunks: usize,
+    _y_chunks: usize,
     chunk_width: usize,
     chunk_height: usize,
     total_width: usize,
@@ -17,7 +17,7 @@ impl Sandbox {
     pub fn new(x_chunks: usize, y_chunks: usize, chunk_width: usize, chunk_height: usize) -> Self {
         Self {
             x_chunks,
-            y_chunks,
+            _y_chunks: y_chunks,
             chunk_width,
             chunk_height,
             total_width: x_chunks * chunk_width,
@@ -67,14 +67,6 @@ impl Sandbox {
             None
         } else {
             self.get_mut(x, y)
-        }
-    }
-
-    pub fn checked_get_mut_i32(&mut self, x: i32, y: i32) -> Option<&mut Particle> {
-        if self.out_of_bounds_i32(x, y) {
-            None
-        } else {
-            self.get_mut(x as usize, y as usize)
         }
     }
 

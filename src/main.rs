@@ -1,10 +1,15 @@
 use bevy::{
-    input::common_conditions::input_toggle_active, prelude::*, render::camera::ScalingMode,
+    prelude::*, render::camera::ScalingMode,
     window::PresentMode,
 };
+use bevy_rapier2d::prelude::*;
+
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_rapier2d::prelude::*;
+#[cfg(feature = "dev")]
+use bevy::input::common_conditions::input_toggle_active;
+#[cfg(not(debug_assertions))]
+use bevy::window::WindowMode;
 
 mod damage;
 mod load_level;
@@ -19,20 +24,15 @@ use player::PlayerPlugin;
 use sandbox::SandboxPlugin;
 
 fn main() {
-    let mut res = (1280.0, 720.0);
-
-    #[cfg(not(debug_assertions))]
-    {
-        res = (1920.0, 1080.0);
-    }
-
     let mut app = App::new();
     app.add_plugins(
         DefaultPlugins
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Bevy Falling Sand".into(),
-                    resolution: res.into(),
+                    resolution: (1280.0, 720.0).into(),
+                    #[cfg(not(debug_assertions))]
+                    mode: WindowMode::BorderlessFullscreen,
                     present_mode: PresentMode::AutoVsync,
                     ..default()
                 }),

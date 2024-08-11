@@ -7,7 +7,7 @@ use bevy_tnua::controller::TnuaControllerBundle;
 use bevy_tnua_rapier2d::{TnuaRapier2dIOBundle, TnuaRapier2dSensorShape};
 use leafwing_input_manager::prelude::*;
 
-use super::{Action, PlayerBundle, PlayerHealth, PlayerIndex, UsedGamepads};
+use super::{Action, PlayerBundle, PlayerHealth, UsedGamepads};
 
 pub struct PlayerConnectionPlugin;
 
@@ -61,7 +61,6 @@ fn spawn_player(
                 ActiveEvents::COLLISION_EVENTS,
                 PlayerBundle {
                     health: PlayerHealth(50000.0),
-                    index: PlayerIndex(used_gamepads.gamepads.len()),
                     ..default()
                 },
             ))

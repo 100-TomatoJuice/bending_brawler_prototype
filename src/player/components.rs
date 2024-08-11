@@ -70,9 +70,6 @@ impl Default for ExtraJumps {
     }
 }
 
-#[derive(Default, Component)]
-pub struct PlayerIndex(pub usize);
-
 #[derive(Default, Bundle)]
 pub struct PlayerBundle {
     pub aim_direction: AimDirection,
@@ -82,5 +79,4 @@ pub struct PlayerBundle {
     pub jumps: ExtraJumps,
     pub held: HeldObject,
     pub health: PlayerHealth,
-    pub index: PlayerIndex,
 }
