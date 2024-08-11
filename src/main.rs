@@ -1,15 +1,12 @@
-use bevy::{
-    prelude::*, render::camera::ScalingMode,
-    window::PresentMode,
-};
+use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
 use bevy_rapier2d::prelude::*;
 
-#[cfg(feature = "dev")]
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 #[cfg(feature = "dev")]
 use bevy::input::common_conditions::input_toggle_active;
 #[cfg(not(debug_assertions))]
 use bevy::window::WindowMode;
+#[cfg(feature = "dev")]
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod damage;
 mod load_level;
