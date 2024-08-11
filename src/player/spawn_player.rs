@@ -35,11 +35,6 @@ fn spawn_player(
             .with(Action::Grab, GamepadButtonType::RightTrigger2)
             .with(Action::Set, GamepadButtonType::LeftTrigger)
             .with(Action::Parry, GamepadButtonType::RightTrigger);
-        // .insert(Action::Move, DualAxis::left_stick())
-        // .insert(Action::Aim, DualAxis::right_stick())
-        // .insert(Action::Jump, GamepadButtonType::LeftTrigger2)
-        // .insert(Action::Grab, GamepadButtonType::RightTrigger2)
-        // .insert(Action::Push, GamepadButtonType::RightTrigger)
         map.set_gamepad(event.gamepad);
         let entity = commands
             .spawn((
@@ -63,26 +58,7 @@ fn spawn_player(
                 TnuaRapier2dIOBundle::default(),
                 CollisionGroups::new(Group::all(), Group::all().difference(Group::GROUP_1)),
                 LockedAxes::ROTATION_LOCKED,
-                // KinematicCharacterController {
-                //     autostep: Some(CharacterAutostep {
-                //         max_height: CharacterLength::Absolute(1.0),
-                //         min_width: CharacterLength::Absolute(0.5),
-                //         include_dynamic_bodies: false,
-                //     }),
-                //     max_slope_climb_angle: 65.0_f32.to_radians(),
-                //     min_slope_slide_angle: 70.0_f32.to_radians(),
-                //     snap_to_ground: None,
-                //     filter_groups: Some(CollisionGroups::new(
-                //         Group::GROUP_1,
-                //         Group::ALL.difference(Group::GROUP_1),
-                //     )),
-                //     filter_flags: QueryFilterFlags::EXCLUDE_SENSORS,
-                //     ..default()
-                // },
-                // CollisionGroups::new(Group::GROUP_1, Group::ALL),
-                // ActiveCollisionTypes::KINEMATIC_STATIC,
                 ActiveEvents::COLLISION_EVENTS,
-                // Ccd::enabled(),
                 PlayerBundle {
                     health: PlayerHealth(50000.0),
                     index: PlayerIndex(used_gamepads.gamepads.len()),
