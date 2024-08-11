@@ -11,6 +11,7 @@ Bending Brawler is a 2D brawler where the players can use the environment to def
 
 | Action | Button | Description |
 | --- | --- | --- |
+| Join | Any Button | Spawns the player into the world. |
 | Move | Left Stick | Move around the environment. |
 | Aim | Right Stick | Move the grab circle around the player. |
 | Jump | Left Trigger | Hold for a full jump, release for a shorter jump. Press again while in the air to preform a double jump. |
