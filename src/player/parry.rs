@@ -46,7 +46,7 @@ impl Default for Parry {
             current_radius: 240.0,
             duration: 0.10,
             time_left: Timer::from_seconds(0.0, TimerMode::Once),
-            regen_rate: 0.01,
+            regen_rate: 0.6,
             falloff: 30.0,
         }
     }
@@ -58,7 +58,7 @@ fn regen_parry(mut query: Query<&mut Parry>, time: Res<Time>) {
         let p = if x >= 1.0 {
             1.0
         } else {
-            parry.regen_rate * x.powf(2.0)
+            parry.regen_rate * time.delta_seconds() * x.powf(2.0)
         };
 
         parry.current_radius = parry.max_radius * (x + p).min(1.0);
