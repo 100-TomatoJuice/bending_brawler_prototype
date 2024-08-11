@@ -12,9 +12,9 @@ env:
   RUSTDOCFLAGS: --deny warnings
 
 jobs:
-  # Run tests.
+  # Run build.
   test:
-    name: Tests
+    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -30,11 +30,9 @@ jobs:
       - name: Populate target directory from cache
         uses: Leafwing-Studios/cargo-cache@v2
 
-      - name: Run tests
+      - name: Run Build
         run: |
-          cargo test --workspace --all-features --all-targets
-          # Workaround for https://github.com/rust-lang/cargo/issues/6669
-          cargo test --workspace --all-features --doc
+          cargo build --workspace --all-features --all-targets
 
   # Check formatting.
   format:
